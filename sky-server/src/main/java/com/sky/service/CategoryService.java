@@ -34,8 +34,9 @@ public interface CategoryService {
 
     /**
      * 启用、禁用分类
-     * @param status
-     * @param id
+     *
+     * @param status 分类状态：1为启用，0为禁用
+     * @param id 分类id
      */
     void startOrStop(Integer status, Long id);
 

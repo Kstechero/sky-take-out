@@ -108,15 +108,16 @@ public class CategoryServiceImpl implements CategoryService{
 
     /**
      * 启用、禁用分类
-     * @param status
-     * @param id
+     *
+     * @param status 分类状态：1为启用，0为禁用
+     * @param id 分类id
      */
+    @Override
     public void startOrStop(Integer status, Long id) {
+        // 只更新指定分类的状态字段
         Category category = Category.builder()
                 .id(id)
                 .status(status)
-                // .updateTime(LocalDateTime.now())
-                // .updateUser(BaseContext.getCurrentId())
                 .build();
         categoryMapper.update(category);
     }

@@ -168,6 +168,22 @@ public class DishServiceImpl implements DishService {
         }
     }
 
+    /**
+     * 菜品起售、停售
+     *
+     * @param status 菜品状态：1为起售，0为停售
+     * @param id 菜品id
+     */
+    @Override
+    public void startOrStop(Integer status, Long id) {
+        // 只更新指定菜品的状态字段
+        Dish dish = Dish.builder()
+                .id(id)
+                .status(status)
+                .build();
+        dishMapper.update(dish);
+    }
+
        /**
      * 条件查询菜品和口味
      * @param dish
