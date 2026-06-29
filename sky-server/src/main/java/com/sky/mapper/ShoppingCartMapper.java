@@ -6,6 +6,7 @@ import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
+import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
 
@@ -40,4 +41,7 @@ public interface ShoppingCartMapper {
     /** 清空指定用户的购物车。 */
     @Delete("delete from shopping_cart where user_id = #{userId}")
     void deleteByUserId(Long userId);
+
+    /** 批量添加购物车记录，用于“再来一单”。 */
+    void insertBatch(@Param("shoppingCartList") List<ShoppingCart> shoppingCartList);
 }

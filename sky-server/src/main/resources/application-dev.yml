@@ -14,5 +14,9 @@ sky:
   wechat:
     appid: wx56feb8824e013199
     secret: 1436664dd35f353ed9a5078875ab35b4
-
-
+  baidu:
+    # 百度地图 Web 服务 AK，用于后续配送范围计算。
+    ak: wj2XCcQeLL4fFWmIOjsc2c99FbcZF3qX
+  payment:
+    # 本地开发不调用微信支付和退款接口。
+    mock-enabled: true
