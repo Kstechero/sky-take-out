@@ -1,5 +1,6 @@
 package com.sky.service.impl;
 
+import com.alibaba.fastjson.JSON;
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
 import com.sky.constant.MessageConstant;
@@ -22,6 +23,7 @@ import com.sky.utils.WeChatPayUtil;
 import com.sky.vo.OrderStatisticsVO;
 import com.sky.vo.OrderSubmitVO;
 import com.sky.vo.OrderVO;
+import com.sky.websocket.WebSocketServer;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -31,6 +33,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -49,6 +53,8 @@ public class OrderServiceImpl implements OrderService {
     private ShoppingCartMapper shoppingCartMapper;
     @Autowired
     private WeChatPayUtil weChatPayUtil;
+    @Autowired
+    private WebSocketServer webSocketServer;
 
     /** 开发环境开启时，不实际调用微信退款接口。 */
     @Value("${sky.payment.mock-enabled:true}")
@@ -149,6 +155,52 @@ public class OrderServiceImpl implements OrderService {
                 .checkoutTime(LocalDateTime.now())
                 .build();
         orderMapper.update(update);
+
+        // 模拟支付没有微信回调，因此在这里直接向管理端发送来单提醒。
+        pushOrderMessage(1, orders.getId(), "订单号：" + orders.getNumber());
+    }
+
+    /**
+     * 处理真实微信支付成功回调。重复回调时直接返回，避免重复推送。
+     */
+    @Override
+    @Transactional
+    public void paySuccess(String orderNumber) {
+        Orders orders = orderMapper.getByNumber(orderNumber);
+        if (orders == null) {
+            throw new OrderBusinessException(MessageConstant.ORDER_NOT_FOUND);
+        }
+        if (Orders.PAID.equals(orders.getPayStatus())
+                && Orders.TO_BE_CONFIRMED.equals(orders.getStatus())) {
+            return;
+        }
+        if (!Orders.PENDING_PAYMENT.equals(orders.getStatus())) {
+            throw new OrderBusinessException(MessageConstant.ORDER_STATUS_ERROR);
+        }
+
+        Orders update = Orders.builder()
+                .id(orders.getId())
+                .status(Orders.TO_BE_CONFIRMED)
+                .payStatus(Orders.PAID)
+                .checkoutTime(LocalDateTime.now())
+                .build();
+        orderMapper.update(update);
+        pushOrderMessage(1, orders.getId(), "订单号：" + orderNumber);
+    }
+
+    /**
+     * 当前用户只能催促自己的待接单、已接单或派送中订单。
+     */
+    @Override
+    public void reminder(Long id) {
+        Orders orders = getOwnedOrder(id);
+        Integer status = orders.getStatus();
+        if (!Orders.TO_BE_CONFIRMED.equals(status)
+                && !Orders.CONFIRMED.equals(status)
+                && !Orders.DELIVERY_IN_PROGRESS.equals(status)) {
+            throw new OrderBusinessException(MessageConstant.ORDER_STATUS_ERROR);
+        }
+        pushOrderMessage(2, id, "订单号：" + orders.getNumber());
     }
 
     /**
@@ -309,7 +361,12 @@ public class OrderServiceImpl implements OrderService {
         if (!Orders.CONFIRMED.equals(orders.getStatus())) {
             throw new OrderBusinessException(MessageConstant.ORDER_STATUS_ERROR);
         }
-        orderMapper.update(Orders.builder().id(id).status(Orders.DELIVERY_IN_PROGRESS).build());
+        orderMapper.update(Orders.builder()
+                .id(id)
+                .status(Orders.DELIVERY_IN_PROGRESS)
+                // 派送中阶段暂用 deliveryTime 记录开始派送时间，供超时任务计算。
+                .deliveryTime(LocalDateTime.now())
+                .build());
     }
 
     /** 派送中的订单才能标记为完成。 */
@@ -352,6 +409,17 @@ public class OrderServiceImpl implements OrderService {
             weChatPayUtil.refund(orders.getNumber(), orders.getNumber(),
                     orders.getAmount(), orders.getAmount());
         }
+    }
+
+    /**
+     * 推送订单消息：type=1 表示来单提醒，type=2 表示客户催单。
+     */
+    private void pushOrderMessage(int type, Long orderId, String content) {
+        Map<String, Object> message = new HashMap<>();
+        message.put("type", type);
+        message.put("orderId", orderId);
+        message.put("content", content);
+        webSocketServer.sendToAllClient(JSON.toJSONString(message));
     }
 
     /** 将订单集合转换成前端需要的订单 VO。 */

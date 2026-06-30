@@ -69,4 +69,7 @@ public interface DishMapper {
     @AutoFill(value = OperationType.UPDATE)
     void update(Dish dish);
 
+    @Select("select count(id) from dish where status = #{status}")
+    Integer countByStatus(Integer status);
+
 }

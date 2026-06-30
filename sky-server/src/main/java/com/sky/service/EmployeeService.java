@@ -5,6 +5,7 @@ import com.sky.dto.EmployeeLoginDTO;
 import com.sky.dto.EmployeePageQueryDTO;
 import com.sky.entity.Employee;
 import com.sky.result.PageResult;
+import com.sky.dto.PasswordEditDTO;
 
 public interface EmployeeService {
 
@@ -50,6 +51,9 @@ public interface EmployeeService {
      * @param employeeDTO
      */
     void update(EmployeeDTO employeeDTO);
+
+    /** 修改当前登录员工密码。 */
+    void editPassword(PasswordEditDTO passwordEditDTO);
 
     
 

@@ -6,6 +6,7 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import com.sky.context.BaseContext;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -63,6 +64,14 @@ public class UserController {
 
         return Result.success(userLoginVO);
 
+    }
+
+    /** 用户退出；JWT 无状态，前端还需删除本地 token。 */
+    @PostMapping("/logout")
+    @ApiOperation("退出登录")
+    public Result<String> logout(){
+        BaseContext.removeCurrentId();
+        return Result.success();
     }
     
 }

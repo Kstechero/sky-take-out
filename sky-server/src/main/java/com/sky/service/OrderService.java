@@ -24,6 +24,12 @@ public interface OrderService {
     /** 本地模拟支付，不调用微信支付接口。 */
     void payment(OrdersPaymentDTO ordersPaymentDTO);
 
+    /** 处理微信支付成功回调。 */
+    void paySuccess(String orderNumber);
+
+    /** 用户催单并通过 WebSocket 通知管理端。 */
+    void reminder(Long id);
+
     /** 用户端分页查询历史订单。 */
     PageResult pageQueryForUser(int page, int pageSize, Integer status);
 
